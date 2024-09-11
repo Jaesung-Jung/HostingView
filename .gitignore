@@ -67,7 +67,6 @@ playground.xcworkspace
 Packages
 xcuserdata
 DerivedData/
-*.xcodeproj
 
 # CocoaPods
 Pods/

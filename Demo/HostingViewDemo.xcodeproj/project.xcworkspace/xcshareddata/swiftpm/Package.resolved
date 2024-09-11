@@ -1,0 +1,24 @@
+{
+  "originHash" : "f418df45df74c280a0c28032040385d35a7971d3bb3a647315ecbbb475231524",
+  "pins" : [
+    {
+      "identity" : "hostingview",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Jaesung-Jung/HostingView",
+      "state" : {
+        "branch" : "main",
+        "revision" : "51cef325a8b3ecb4c2089a68b3363e5e336355b8"
+      }
+    },
+    {
+      "identity" : "snapkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SnapKit/SnapKit",
+      "state" : {
+        "revision" : "2842e6e84e82eb9a8dac0100ca90d9444b0307f4",
+        "version" : "5.7.1"
+      }
+    }
+  ],
+  "version" : 3
+}
