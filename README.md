@@ -14,6 +14,13 @@ In iOS 16, Apple introduced `UIHostingConfiguration` as a new way to integrate S
 
 This package provides two ways to integrate SwiftUI: `HostingView` and `StatefulHostingView<State>`.
 
+#### 💬 ... Why should we use this package instead of UIHostingConfiguration?
+- When using UIHostingConfiguration to create a CustomView (not a Cell) and applying Auto Layout, intrinsicContentSize may not be calculated correctly. This package properly calculates the content size and works seamlessly with Auto Layout.
+
+- The most powerful aspect is when using StatefulHostingView to create a CustomView or CustomControl. It allows you to easily leverage SwiftUI’s features and the benefits of declarative programming within UIKit. The demo project includes an [implementation of UISwitch](https://github.com/Jaesung-Jung/HostingView/blob/5856ea1a8cf7b5c804096293d353c8727c7828de/Demo/HostingViewDemo/Menu/CustomControlViewController.swift#L93) with little code using SwiftUI. The demo also demonstrates the bounce effect and On/Off animation.
+
+- More simple than UIHostingConfiguration or UIHostingController.
+
 ## HostingView
 You can wrap a stateless SwiftUI view.
 ```swift
