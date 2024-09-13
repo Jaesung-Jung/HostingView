@@ -55,7 +55,7 @@ final class CustomControlViewController: UIViewController {
   }
 }
 
-// MARK: - CustomSwitch
+// MARK: - CustomControlViewController.CustomSwitch
 
 extension CustomControlViewController {
   final class CustomSwitch: UIControl {
@@ -72,19 +72,21 @@ extension CustomControlViewController {
 
     override var intrinsicContentSize: CGSize { contentView.intrinsicContentSize }
 
-    var isOn: Bool {
+    @inlinable var isOn: Bool {
       get { contentView.state.isOn }
       set { contentView.state.isOn = newValue }
     }
 
     override var isHighlighted: Bool {
-      get { contentView.state.isPressed }
-      set { contentView.state.isPressed = newValue }
+      didSet {
+        contentView.state.isPressed = isHighlighted
+      }
     }
 
     override var isEnabled: Bool {
-      get { contentView.state.isEnabled }
-      set { contentView.state.isEnabled = newValue }
+      didSet {
+        contentView.state.isEnabled = isEnabled
+      }
     }
 
     override init(frame: CGRect) {
@@ -129,6 +131,7 @@ extension CustomControlViewController {
       }, for: .touchUpInside)
     }
 
+    @available(*, unavailable)
     required init?(coder: NSCoder) {
       fatalError("init(coder:) has not been implemented")
     }
