@@ -31,7 +31,10 @@ public class HostingView: UIView {
   private(set) var contentView: UIView!
 
   public override var intrinsicContentSize: CGSize {
-    contentView.intrinsicContentSize
+    if frame.size == .zero {
+      return contentView.intrinsicContentSize
+    }
+    return contentView.systemLayoutSizeFitting(frame.size, withHorizontalFittingPriority: .required, verticalFittingPriority: .defaultLow)
   }
 
   public init<Content: View>(@ViewBuilder content: () -> Content) {
