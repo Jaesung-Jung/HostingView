@@ -23,9 +23,6 @@
 
 import SwiftUI
 
-// MARK: - StatefulHostingView
-
-@MainActor
 public class StatefulHostingView<State>: UIView {
   private(set) var contentView: UIView!
   let stateObject: StateObject
@@ -40,6 +37,11 @@ public class StatefulHostingView<State>: UIView {
       return contentView.intrinsicContentSize
     }
     return contentView.systemLayoutSizeFitting(frame.size, withHorizontalFittingPriority: .required, verticalFittingPriority: .defaultLow)
+  }
+
+  public override var safeAreaInsets: UIEdgeInsets {
+    get { .zero }
+    set {}
   }
 
   public init<Content: View>(state: State, @ViewBuilder content: @escaping (State) -> Content) {

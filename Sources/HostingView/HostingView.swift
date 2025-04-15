@@ -21,12 +21,8 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 //  THE SOFTWARE.
 
-import UIKit
 import SwiftUI
 
-// MARK: - HostingView
-
-@MainActor
 public class HostingView: UIView {
   private(set) var contentView: UIView!
 
@@ -35,6 +31,11 @@ public class HostingView: UIView {
       return contentView.intrinsicContentSize
     }
     return contentView.systemLayoutSizeFitting(frame.size, withHorizontalFittingPriority: .required, verticalFittingPriority: .defaultLow)
+  }
+
+  public override var safeAreaInsets: UIEdgeInsets {
+    get { .zero }
+    set {}
   }
 
   public init<Content: View>(@ViewBuilder content: () -> Content) {
@@ -90,8 +91,8 @@ extension HostingView {
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
       let key = hash(proposal)
-      if let cachedSize = cache.sizes[key] {
-        return cachedSize
+      if let cacheSize = cache.sizes[key] {
+        return cacheSize
       }
       let fittingSize = subviews.first?.sizeThatFits(proposal) ?? .zero
       cache.sizes[key] = fittingSize
