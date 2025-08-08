@@ -33,10 +33,7 @@ public class StatefulHostingView<State>: UIView {
   }
 
   public override var intrinsicContentSize: CGSize {
-    if frame.size == .zero {
-      return contentView.intrinsicContentSize
-    }
-    return contentView.systemLayoutSizeFitting(frame.size, withHorizontalFittingPriority: .required, verticalFittingPriority: .defaultLow)
+    contentView.intrinsicContentSize
   }
 
   public override var safeAreaInsets: UIEdgeInsets {
