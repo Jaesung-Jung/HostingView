@@ -1,30 +1,60 @@
 <p align="center">
-<img src="https://img.shields.io/badge/platforms-iOS 16+%20%7C%20macCatalyst 16+%20%7C%20tvOS 16+-333333.svg" alt="Supported Platforms: iOS, macCatalyst and tvOS" />
+<img src="https://img.shields.io/badge/platforms-iOS%2016%2B%20%7C%20macCatalyst%2016%2B%20%7C%20tvOS%2016%2B%20%7C%20visionOS%201%2B-333333.svg" alt="Supported platforms: iOS 16+, macCatalyst 16+, tvOS 16+, visionOS 1+" />
 <br />
-<a href="https://github.com/swiftlang/swift-package-manager" alt="RxSwift on Swift Package Manager" title="RxSwift on Swift Package Manager"><img src="https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen.svg" /></a>
+<a href="https://github.com/swiftlang/swift-package-manager" title="Swift Package Manager"><img src="https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen.svg" alt="Swift Package Manager compatible" /></a>
 </p>
 
 # HostingView
 
-SwiftUI is Apple's modern UI framework. While SwiftUI has come a long way since it was first released, it still lacks the ability to fully control every UI element in great detail, which is why many developers still use UIKit or partially use SwiftUI.
+`HostingView` makes it straightforward to place SwiftUI views inside a UIKit
+view hierarchy.
 
-Apple provides a way to integrate UIKit and SwiftUI, but using the `UIHostingController` within the `UIView` hierarchy can be a bit cumbersome.
+SwiftUI and UIKit work well together, but embedding SwiftUI in UIKit often means
+managing a `UIHostingController` or adapting `UIHostingConfiguration` outside of
+the cell APIs it was designed for. This package provides small `UIView`
+subclasses that host SwiftUI content while participating naturally in Auto
+Layout.
 
-In iOS 16, Apple introduced `UIHostingConfiguration` as a new way to integrate SwiftUI with UICollectionViewCell and UITableViewCell. Inspired by this, I created `HostingView`.
+## Features
 
-This package provides two ways to integrate SwiftUI: `HostingView` and `StatefulHostingView<State>`.
+- Host SwiftUI content directly in a `UIView`.
+- Measure hosted content through Auto Layout and `intrinsicContentSize`.
+- Update SwiftUI content from UIKit state changes.
+- Build UIKit custom views and controls with SwiftUI rendering code.
 
-#### 💬 ... Why should we use this package instead of UIHostingConfiguration?
-- When using UIHostingConfiguration to create a CustomView (not a Cell) and applying Auto Layout, intrinsicContentSize may not be calculated correctly. This package properly calculates the content size and works seamlessly with Auto Layout.
+## Interaction and sizing
 
-- The most powerful aspect is when using StatefulHostingView to create a CustomView or CustomControl. It allows you to easily leverage SwiftUI’s features and the benefits of declarative programming within UIKit. The demo project includes an [implementation of UISwitch](https://github.com/Jaesung-Jung/HostingView/blob/b62c4145cb2ac1f19209abc311bf142313f1f8e8/Demo/HostingViewDemo/Menu/CustomControlViewController.swift#L93-L124) with little code using SwiftUI. The demo also demonstrates the bounce effect and On/Off animation.
+For the most predictable layout behavior, use `HostingView` for SwiftUI content
+that does not handle user interaction directly.
 
-- More simple than UIHostingConfiguration or UIHostingController.
+UIKit should usually own user actions, control state, and event handling. Let
+SwiftUI render the current state, and update that state from UIKit by assigning
+to `StatefulHostingView.state`.
 
-## HostingView
-You can wrap a stateless SwiftUI view.
+Avoid placing interactive SwiftUI controls inside a hosting view when those
+interactions can change the hosted content's size. SwiftUI interactions that
+mutate internal state and resize the view may cause intrinsic content size
+updates to arrive at times that are difficult for UIKit's layout system to
+reconcile.
+
+The recommended pattern is:
+
+- Handle taps, gestures, target-action, and accessibility behavior in UIKit.
+- Render the visual state with SwiftUI.
+- Use `StatefulHostingView` when UIKit needs to send state changes into SwiftUI.
+- Prefer noninteractive SwiftUI content when using `HostingView`.
+
+## When to use HostingView
+
+Use `HostingView` when the SwiftUI content is created once and does not need an
+external state value from UIKit. It works best for visual content that does not
+own user interaction.
+
 ```swift
-let gradientText = HostingView {
+import SwiftUI
+import HostingView
+
+let titleView = HostingView {
   Text("Hosting View")
     .font(.largeTitle)
     .fontWeight(.black)
@@ -36,45 +66,109 @@ let gradientText = HostingView {
       )
     )
 }
+
+view.addSubview(titleView)
+titleView.translatesAutoresizingMaskIntoConstraints = false
+
+NSLayoutConstraint.activate([
+  titleView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+  titleView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+])
 ```
-The `intrinsicContentSize` is also correctly calculated, ensuring that the view behaves appropriately according to the size provided by the SwiftUI view.
 
-## StatefulHostingView
-You can wrap a stateful SwiftUI view, and SwiftUI will re-render the view whenever it detects a state change.
+The hosting view invalidates its intrinsic content size when the SwiftUI
+content changes size, so UIKit can measure it again during layout.
+
+## When to use StatefulHostingView
+
+Use `StatefulHostingView<State>` when UIKit owns a value and SwiftUI renders a
+view from that value. Assigning a new value to `state` publishes the update to
+SwiftUI and invalidates the hosting view's intrinsic content size.
+
 ```swift
-let statefulText = StatefulHostingView(state: 1) { state in // 1 is initial value
-  VStack {
-    Text("Stateful Hosting View")
-      .font(.headline)
-      .fontWeight(.black)
+import SwiftUI
+import HostingView
 
-    Text("State is \(state)")
-      .font(.subheadline)
-      .fontWeight(.medium)
-      .foregroundStyle(.secondary)
-  }
+let favoriteView = StatefulHostingView(state: false) { isFavorite in
+  Label(
+    isFavorite ? "Favorite" : "Not Favorite",
+    systemImage: isFavorite ? "star.fill" : "star"
+  )
+  .font(.headline)
+  .foregroundStyle(isFavorite ? .yellow : .secondary)
 }
 
-statefulText.state = 100 // When the state changes, SwiftUI re-renders the view.
+favoriteView.state = true
 ```
 
-> For more use cases, please refer to the [Demo](https://github.com/Jaesung-Jung/HostingView/tree/main/Demo) project.
+`StatefulHostingView` is especially useful for custom UIKit controls. A control
+can keep touch handling, target-action, and accessibility behavior in UIKit
+while rendering its visual state with SwiftUI.
+
+```swift
+final class FavoriteButton: UIControl {
+  private let contentView = StatefulHostingView(state: false) { isSelected in
+    Image(systemName: isSelected ? "star.fill" : "star")
+      .foregroundStyle(isSelected ? .yellow : .secondary)
+      .font(.title2)
+      .frame(width: 44, height: 44)
+  }
+
+  override var intrinsicContentSize: CGSize {
+    contentView.intrinsicContentSize
+  }
+
+  override var isSelected: Bool {
+    didSet {
+      contentView.state = isSelected
+    }
+  }
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    contentView.isUserInteractionEnabled = false
+    addSubview(contentView)
+
+    addAction(UIAction { [weak self] _ in
+      self?.isSelected.toggle()
+      self?.sendActions(for: .valueChanged)
+    }, for: .touchUpInside)
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    contentView.frame = bounds
+  }
+}
+```
+
+For more examples, see the [Demo](Demo) project.
 
 ## Requirements
+
 - iOS 16+
 - macCatalyst 16+
 - tvOS 16+
+- visionOS 1+
 
-## Install
-### [Swift Package Manager](https://github.com/swiftlang/swift-package-manager)
-The [Swift Package Manager](https://github.com/swiftlang/swift-package-manager) is a tool for automating the distribution of Swift code and is integrated into the swift compiler.
+## Installation
+
+### Swift Package Manager
+
+Add `HostingView` as a package dependency:
+
 ```swift
 import PackageDescription
 
 let package = Package(
   name: "YourProject",
   dependencies: [
-    .package(url: "https://github.com/Jaesung-Jung/HostingView.git", .upToNextMajor(from: "1.0"))
+    .package(url: "https://github.com/Jaesung-Jung/HostingView.git", .upToNextMajor(from: "1.3"))
   ],
   targets: [
     .target(
@@ -87,5 +181,13 @@ let package = Package(
 )
 ```
 
+Then import the package where you want to host SwiftUI content:
+
+```swift
+import HostingView
+```
+
 ## License
-MIT license. See [LICENSE](https://github.com/Jaesung-Jung/HostingView/blob/main/LICENSE) for details.
+
+HostingView is available under the MIT license. See [LICENSE](LICENSE) for
+details.
