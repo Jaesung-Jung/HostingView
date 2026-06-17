@@ -23,30 +23,85 @@
 
 import SwiftUI
 
+/// A UIKit view that hosts a hierarchy of SwiftUI views.
+///
+/// Use a hosting view when you want to place SwiftUI content directly in a
+/// UIKit view hierarchy without managing a hosting controller. The view uses
+/// Auto Layout sizing APIs to report the size of its SwiftUI content and
+/// invalidates that size when the hosted content changes its geometry.
+///
+/// The following example creates a UIKit view that displays SwiftUI text:
+///
+/// ```swift
+/// let titleView = HostingView {
+///   Text("Hosting View")
+///     .font(.largeTitle)
+///     .fontWeight(.black)
+/// }
+/// ```
+///
+/// Add the resulting view to your UIKit hierarchy, and constrain it as you
+/// would any other view:
+///
+/// ```swift
+/// view.addSubview(titleView)
+/// titleView.translatesAutoresizingMaskIntoConstraints = false
+///
+/// NSLayoutConstraint.activate([
+///   titleView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+///   titleView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+/// ])
+/// ```
 public class HostingView: UIView {
   private(set) var contentView: UIView!
 
+  /// The natural size of the hosted SwiftUI content.
+  ///
+  /// The view measures its content using the current bounds width when one is
+  /// available. This lets multiline and flexible SwiftUI content participate
+  /// in Auto Layout using the width that the layout system has assigned.
   public override var intrinsicContentSize: CGSize {
-    contentView.intrinsicContentSize
+    let targetWidth = bounds.width > .zero ? bounds.width : UIView.layoutFittingCompressedSize.width
+    let horizontalPriority: UILayoutPriority = bounds.width > .zero ? .required : .fittingSizeLevel
+    return contentView.systemLayoutSizeFitting(
+      CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height),
+      withHorizontalFittingPriority: horizontalPriority,
+      verticalFittingPriority: .fittingSizeLevel
+    )
   }
 
+  /// The safe-area insets for the hosting view.
+  ///
+  /// This view reports zero safe-area insets so the hosted SwiftUI hierarchy
+  /// can extend to the edges of the UIKit view that contains it.
   public override var safeAreaInsets: UIEdgeInsets {
     get { .zero }
     set {}
   }
 
+  /// Creates a hosting view with the SwiftUI content that you provide.
+  ///
+  /// The initializer evaluates the view builder when creating the underlying
+  /// hosting configuration. When SwiftUI reports a geometry change, the hosting
+  /// view invalidates its intrinsic content size so Auto Layout can measure it
+  /// again.
+  ///
+  /// - Parameter content: A view builder that creates the SwiftUI view
+  ///   hierarchy to host.
   public init<Content: View>(@ViewBuilder content: () -> Content) {
     super.init(frame: .zero)
-    let content = content()
     let invalidateSize: @MainActor () -> Void = { [weak self] in
       self?.invalidateIntrinsicContentSize()
     }
     contentView = UIHostingConfiguration {
-      HostingLayout(invalidateSize) {
-        content
-      }
-      .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-      .ignoresSafeArea()
+      content()
+        .onGeometryChange(for: CGSize.self) {
+          $0.size
+        } action: { _ in
+          invalidateSize()
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+        .ignoresSafeArea(.container, edges: .all)
     }
     .margins(.all, 0)
     .makeContentView()
@@ -63,62 +118,21 @@ public class HostingView: UIView {
     super.layoutSubviews()
     contentView.frame = bounds
   }
-}
 
-// MARK: - HostingView.HostingLayout
+  public override func systemLayoutSizeFitting(_ targetSize: CGSize) -> CGSize {
+    systemLayoutSizeFitting(
+      targetSize,
+      withHorizontalFittingPriority: .fittingSizeLevel,
+      verticalFittingPriority: .fittingSizeLevel
+    )
+  }
 
-extension HostingView {
-  struct HostingLayout: Layout {
-    struct Cache {
-      var sizes: [Int: CGSize] = [:]
-    }
-
-    let invalidateSize: @MainActor () -> Void
-
-    init(_ invalidateSize: @MainActor @escaping () -> Void) {
-      self.invalidateSize = invalidateSize
-    }
-
-    @inlinable func hash(_ proposedViewSize: ProposedViewSize) -> Int {
-      var hasher = Hasher()
-      hasher.combine(proposedViewSize.width)
-      hasher.combine(proposedViewSize.height)
-      return hasher.finalize()
-    }
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) -> CGSize {
-      let key = hash(proposal)
-      if let cacheSize = cache.sizes[key] {
-        return cacheSize
-      }
-      let fittingSize = subviews.first?.sizeThatFits(proposal) ?? .zero
-      cache.sizes[key] = fittingSize
-      return fittingSize
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout Cache) {
-      let position = CGPoint(x: max(0, bounds.origin.x), y: max(0, bounds.origin.y))
-      for subview in subviews {
-        subview.place(at: position, proposal: proposal)
-      }
-      Task {
-        await MainActor.run {
-          invalidateSize()
-        }
-      }
-    }
-
-    func makeCache(subviews: Subviews) -> Cache {
-      Cache(
-        sizes: [
-          hash(.unspecified): subviews.first?.sizeThatFits(.unspecified) ?? .zero
-        ]
-      )
-    }
-
-    func updateCache(_ cache: inout Cache, subviews: Subviews) {
-      cache.sizes.removeAll(keepingCapacity: true)
-    }
+  public override func systemLayoutSizeFitting(
+    _ targetSize: CGSize,
+    withHorizontalFittingPriority horizontalFittingPriority: UILayoutPriority,
+    verticalFittingPriority: UILayoutPriority
+  ) -> CGSize {
+    contentView.systemLayoutSizeFitting(targetSize, withHorizontalFittingPriority: horizontalFittingPriority, verticalFittingPriority: verticalFittingPriority)
   }
 }
 

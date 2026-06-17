@@ -22,52 +22,68 @@
 //  THE SOFTWARE.
 
 import SwiftUI
+import Combine
 
-public class StatefulHostingView<State>: UIView {
-  private(set) var contentView: UIView!
-  let stateObject: StateObject
+/// A hosting view that updates its SwiftUI content when its state changes.
+///
+/// Use a stateful hosting view when UIKit owns the source of truth for a value
+/// that SwiftUI renders. The view passes the current state to the content
+/// builder, publishes changes to SwiftUI, and invalidates its intrinsic content
+/// size after each assignment.
+///
+/// The following example creates a view whose SwiftUI content depends on a
+/// Boolean value:
+///
+/// ```swift
+/// let favoriteView = StatefulHostingView(state: false) { isFavorite in
+///   Label(
+///     isFavorite ? "Favorite" : "Not Favorite",
+///     systemImage: isFavorite ? "star.fill" : "star"
+///   )
+/// }
+///
+/// favoriteView.state = true
+/// ```
+///
+/// Use the ``state`` property to send new values from UIKit into the hosted
+/// SwiftUI hierarchy.
+public final class StatefulHostingView<State>: HostingView {
+  private let stateObject: StateObject
 
+  /// The value that the view passes to its hosted SwiftUI content.
+  ///
+  /// Assigning a new value updates the SwiftUI hierarchy and invalidates the
+  /// view's intrinsic content size. Use this property when UIKit events, model
+  /// changes, or control state should drive the rendered SwiftUI content.
   public var state: State {
     get { stateObject.state }
-    set { stateObject.state = newValue }
+    set {
+      stateObject.state = newValue
+      invalidateIntrinsicContentSize()
+    }
   }
 
-  public override var intrinsicContentSize: CGSize {
-    contentView.intrinsicContentSize
-  }
-
-  public override var safeAreaInsets: UIEdgeInsets {
-    get { .zero }
-    set {}
-  }
-
+  /// Creates a stateful hosting view with the initial state and SwiftUI content
+  /// that you provide.
+  ///
+  /// The content builder receives the current state value each time SwiftUI
+  /// evaluates the hosted view hierarchy.
+  ///
+  /// - Parameters:
+  ///   - state: The initial state value to pass to the hosted SwiftUI content.
+  ///   - content: A view builder that creates the SwiftUI view hierarchy for a
+  ///     given state value.
   public init<Content: View>(state: State, @ViewBuilder content: @escaping (State) -> Content) {
-    self.stateObject = StateObject(state: state)
-    super.init(frame: .zero)
-    let invalidateSize: @MainActor () -> Void = { [weak self] in
-      self?.invalidateIntrinsicContentSize()
+    let stateObject = StateObject(state: state)
+    self.stateObject = stateObject
+    super.init {
+      StatefulContentView(stateObject: stateObject, content: content)
     }
-    contentView = UIHostingConfiguration {
-      HostingView.HostingLayout(invalidateSize) {
-        StatefulContentView(stateObject: stateObject, content: content)
-      }
-      .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-      .ignoresSafeArea()
-    }
-    .margins(.all, 0)
-    .makeContentView()
-
-    addSubview(contentView)
   }
 
   @available(*, unavailable)
   public required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
-  }
-
-  public override func layoutSubviews() {
-    super.layoutSubviews()
-    contentView.frame = bounds
   }
 }
 
@@ -88,7 +104,7 @@ extension StatefulHostingView {
 // MARK: - StatefulHostingView.StateObject
 
 extension StatefulHostingView {
-  class StateObject: ObservableObject {
+  final class StateObject: ObservableObject {
     @Published var state: State
 
     init(state: State) {
@@ -97,7 +113,7 @@ extension StatefulHostingView {
   }
 }
 
-// MARK: - HostingView Preview
+// MARK: - StatefulHostingView Preview
 
 @available(iOS 17.0, macCatalyst 17.0, tvOS 17.0, *)
 #Preview {
