@@ -168,7 +168,7 @@ import PackageDescription
 let package = Package(
   name: "YourProject",
   dependencies: [
-    .package(url: "https://github.com/Jaesung-Jung/HostingView.git", .upToNextMajor(from: "1.3"))
+    .package(url: "https://github.com/Jaesung-Jung/HostingView.git", .upToNextMajor(from: "2.0"))
   ],
   targets: [
     .target(
