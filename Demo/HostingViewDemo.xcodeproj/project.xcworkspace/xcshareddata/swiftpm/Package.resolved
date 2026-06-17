@@ -1,15 +1,6 @@
 {
-  "originHash" : "f418df45df74c280a0c28032040385d35a7971d3bb3a647315ecbbb475231524",
+  "originHash" : "d500ba6aaceaa333f5fc863c03516814a141cc6203b6ba35d8ae31334c1ac014",
   "pins" : [
-    {
-      "identity" : "hostingview",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Jaesung-Jung/HostingView",
-      "state" : {
-        "branch" : "main",
-        "revision" : "51cef325a8b3ecb4c2089a68b3363e5e336355b8"
-      }
-    },
     {
       "identity" : "snapkit",
       "kind" : "remoteSourceControl",

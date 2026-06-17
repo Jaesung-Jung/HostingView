@@ -28,29 +28,164 @@ import HostingView
 // MARK: - CustomControlViewController
 
 final class CustomControlViewController: UIViewController {
+  private let switchControl = CustomSwitch()
+  private let statusView = StatefulHostingView(state: Status(isOn: false, isEnabled: true, accentColor: .systemGreen)) { status in
+    StatusCard(status: status)
+  }
+
   override func viewDidLoad() {
     super.viewDidLoad()
     title = "Custom Control"
-    view.backgroundColor = .systemBackground
+    view.backgroundColor = .systemGroupedBackground
 
-    let switchControl = CustomSwitch()
-    view.addSubview(switchControl)
-    switchControl.snp.makeConstraints {
-      $0.center.equalToSuperview()
+    let stackView = UIStackView()
+    stackView.axis = .vertical
+    stackView.alignment = .fill
+    stackView.spacing = 22
+    view.addSubview(stackView)
+    stackView.snp.makeConstraints {
+      $0.leading.trailing.equalTo(view.safeAreaLayoutGuide).inset(24)
+      $0.centerY.equalToSuperview()
     }
 
-    let switchStateLabel = UILabel()
-    switchStateLabel.text = switchControl.isOn ? "ON" : "OFF"
-    switchControl.addAction(UIAction { [switchStateLabel] action in
-      guard let switchControl = action.sender as? CustomSwitch else {
+    let titleView = HostingView {
+      VStack(alignment: .leading, spacing: 8) {
+        Text("UIKit owns the interaction")
+          .font(.title2)
+          .fontWeight(.black)
+
+        Text("The custom control handles touch events in UIKit. SwiftUI renders the visual state through StatefulHostingView.")
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    stackView.addArrangedSubview(titleView)
+
+    let controlContainer = UIView()
+    controlContainer.backgroundColor = .secondarySystemGroupedBackground
+    controlContainer.layer.cornerRadius = 24
+    controlContainer.layer.cornerCurve = .continuous
+    stackView.addArrangedSubview(controlContainer)
+
+    controlContainer.addSubview(switchControl)
+    switchControl.snp.makeConstraints {
+      $0.center.equalToSuperview()
+      $0.top.bottom.equalToSuperview().inset(28)
+    }
+
+    stackView.addArrangedSubview(statusView)
+
+    let tintControl = UISegmentedControl(items: ["Green", "Blue", "Pink"])
+    tintControl.selectedSegmentIndex = 0
+    tintControl.addAction(UIAction { [weak self] _ in
+      self?.updateTint(from: tintControl)
+    }, for: .valueChanged)
+    stackView.addArrangedSubview(tintControl)
+
+    let buttonStackView = UIStackView()
+    buttonStackView.axis = .horizontal
+    buttonStackView.distribution = .fillEqually
+    buttonStackView.spacing = 12
+    stackView.addArrangedSubview(buttonStackView)
+
+    let toggleButton = UIButton(configuration: .filled(), primaryAction: UIAction(title: "Toggle") { [weak self] _ in
+      self?.switchControl.isOn.toggle()
+      self?.switchControl.sendActions(for: .valueChanged)
+    })
+    let enabledButton = UIButton(configuration: .bordered(), primaryAction: UIAction(title: "Disable") { [weak self] action in
+      guard let self, let button = action.sender as? UIButton else {
         return
       }
-      switchStateLabel.text = switchControl.isOn ? "ON" : "OFF"
+      switchControl.isEnabled.toggle()
+      button.configuration?.title = switchControl.isEnabled ? "Disable" : "Enable"
+      updateStatus()
+    })
+    buttonStackView.addArrangedSubview(toggleButton)
+    buttonStackView.addArrangedSubview(enabledButton)
+
+    switchControl.addAction(UIAction { [weak self] _ in
+      self?.updateStatus()
     }, for: .valueChanged)
-    view.addSubview(switchStateLabel)
-    switchStateLabel.snp.makeConstraints {
-      $0.top.equalTo(switchControl.snp.bottom).offset(20)
-      $0.centerX.equalToSuperview()
+    updateStatus()
+  }
+
+  private func updateTint(from control: UISegmentedControl) {
+    switch control.selectedSegmentIndex {
+    case 1:
+      switchControl.onTintColor = .systemBlue
+    case 2:
+      switchControl.onTintColor = .systemPink
+    default:
+      switchControl.onTintColor = .systemGreen
+    }
+    updateStatus()
+  }
+
+  private func updateStatus() {
+    statusView.state = Status(
+      isOn: switchControl.isOn,
+      isEnabled: switchControl.isEnabled,
+      accentColor: switchControl.onTintColor
+    )
+  }
+}
+
+// MARK: - CustomControlViewController.Status
+
+extension CustomControlViewController {
+  struct Status: Equatable {
+    var isOn: Bool
+    var isEnabled: Bool
+    var accentColor: UIColor
+  }
+}
+
+// MARK: - CustomControlViewController.StatusCard
+
+extension CustomControlViewController {
+  struct StatusCard: View {
+    let status: Status
+
+    var body: some View {
+      HStack(spacing: 14) {
+        ZStack {
+          Circle()
+            .fill(Color(uiColor: status.accentColor).opacity(0.16))
+
+          Image(systemName: status.isOn ? "bolt.fill" : "power")
+            .font(.system(size: 20, weight: .bold))
+            .foregroundStyle(Color(uiColor: status.accentColor))
+        }
+        .frame(width: 48, height: 48)
+
+        VStack(alignment: .leading, spacing: 4) {
+          Text(status.isOn ? "Control is active" : "Control is inactive")
+            .font(.headline)
+
+          Text(status.isEnabled ? "UIKit events are enabled" : "UIKit events are disabled")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+
+        Spacer()
+
+        Text(status.isOn ? "ON" : "OFF")
+          .font(.caption)
+          .fontWeight(.black)
+          .monospacedDigit()
+          .foregroundStyle(Color(uiColor: status.accentColor))
+          .padding(.vertical, 7)
+          .padding(.horizontal, 10)
+          .background(Color(uiColor: status.accentColor).opacity(0.12), in: Capsule())
+      }
+      .padding(16)
+      .background(.background, in: RoundedRectangle(cornerRadius: 20))
+      .overlay {
+        RoundedRectangle(cornerRadius: 20)
+          .stroke(.quaternary, lineWidth: 1)
+      }
     }
   }
 }
@@ -72,6 +207,11 @@ extension CustomControlViewController {
 
     override var intrinsicContentSize: CGSize { contentView.intrinsicContentSize }
 
+    var onTintColor: UIColor {
+      get { contentView.state.onTintColor }
+      set { contentView.state.onTintColor = newValue }
+    }
+
     @inlinable var isOn: Bool {
       get { contentView.state.isOn }
       set { contentView.state.isOn = newValue }
@@ -91,43 +231,73 @@ extension CustomControlViewController {
 
     override init(frame: CGRect) {
       self.contentView = StatefulHostingView(state: State()) { state in
-        HStack {
-          if state.isOn {
-            Spacer()
-          }
-          Capsule(style: .circular)
-            .fill(.white)
-            .padding(2)
-            .aspectRatio(state.isPressed ? 1.25 : 1, contentMode: .fit)
-            .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
-            .overlay {
-              ZStack {
-                Image(systemName: "circle")
-                  .scaleEffect(x: state.isOn ? 0 : 1, y: state.isOn ? 0 : 1, anchor: .center)
-                Image(systemName: "checkmark")
-                  .scaleEffect(x: state.isOn ? 1 : 0, y: state.isOn ? 1 : 0, anchor: .center)
-              }
-              .imageScale(.small)
-            }
-          if !state.isOn {
-            Spacer()
-          }
-        }
-        .background(state.isOn ? Color(uiColor: state.onTintColor) : Color(uiColor: state.offTintColor))
-        .mask {
+        let activeColor = Color(uiColor: state.onTintColor)
+        let inactiveColor = Color(uiColor: state.offTintColor)
+        let backgroundColor = state.isEnabled
+          ? (state.isOn ? activeColor : inactiveColor)
+          : Color(uiColor: .systemGray5)
+        let thumbColor = state.isEnabled ? Color.white : Color(uiColor: .systemGray3)
+
+        ZStack {
           Capsule()
+            .fill(backgroundColor)
+            .overlay {
+              Capsule()
+                .stroke(.black.opacity(0.06), lineWidth: 1)
+            }
+
+          HStack {
+            Text("OFF")
+              .font(.caption2)
+              .fontWeight(.black)
+              .foregroundStyle(state.isEnabled ? (state.isOn ? .white.opacity(0.45) : .secondary) : .secondary.opacity(0.55))
+              .frame(maxWidth: .infinity)
+
+            Text("ON")
+              .font(.caption2)
+              .fontWeight(.black)
+              .foregroundStyle(state.isEnabled ? (state.isOn ? .white : .secondary.opacity(0.55)) : .secondary.opacity(0.55))
+              .frame(maxWidth: .infinity)
+          }
+
+          HStack {
+            if state.isOn {
+              Spacer(minLength: 0)
+            }
+
+            ZStack {
+              Capsule()
+                .fill(thumbColor)
+
+              Image(systemName: state.isOn ? "checkmark" : "power")
+                .font(.system(size: 16, weight: .black))
+                .foregroundStyle(state.isEnabled ? (state.isOn ? activeColor : .secondary) : .secondary)
+                .scaleEffect(state.isPressed ? 0.86 : 1)
+            }
+            .frame(width: state.isPressed ? 68 : 54, height: 54)
+            .shadow(color: .black.opacity(state.isEnabled ? 0.18 : 0.06), radius: 7, x: 0, y: 4)
+
+            if !state.isOn {
+              Spacer(minLength: 0)
+            }
+          }
+          .padding(5)
         }
-        .animation(.smooth(duration: 0.3), value: state.isOn)
-        .animation(.smooth(duration: 0.3), value: state.isPressed)
-        .opacity(state.isEnabled ? 1 : 0.5)
-        .frame(width: 51, height: 31)
+        .frame(width: 148, height: 64)
+        .saturation(state.isEnabled ? 1 : 0)
+        .animation(.smooth(duration: 0.28), value: state.isOn)
+        .animation(.smooth(duration: 0.18), value: state.isPressed)
+        .animation(.smooth(duration: 0.2), value: state.isEnabled)
       }
       super.init(frame: frame)
       contentView.isUserInteractionEnabled = false
       addSubview(contentView)
       addAction(UIAction { [weak self] _ in
-        self?.contentView.state.isOn.toggle()
-        self?.sendActions(for: .valueChanged)
+        guard let self, isEnabled else {
+          return
+        }
+        contentView.state.isOn.toggle()
+        sendActions(for: .valueChanged)
       }, for: .touchUpInside)
     }
 

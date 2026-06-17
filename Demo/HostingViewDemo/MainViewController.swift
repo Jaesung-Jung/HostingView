@@ -99,10 +99,14 @@ final class MainViewController: UIViewController, UICollectionViewDelegate {
     switch menu {
     case .nameCard:
       navigationController?.pushViewController(NameCardViewController(), animated: true)
+    case .notificationCard:
+      navigationController?.pushViewController(NotificationCardViewController(), animated: true)
     case .gradientPage:
       navigationController?.pushViewController(GradientPageViewController(), animated: true)
     case .chart:
       navigationController?.pushViewController(ChartViewController(), animated: true)
+    case .progressMeter:
+      navigationController?.pushViewController(ProgressMeterViewController(), animated: true)
     case .customControl:
       navigationController?.pushViewController(CustomControlViewController(), animated: true)
     }
@@ -114,18 +118,24 @@ final class MainViewController: UIViewController, UICollectionViewDelegate {
 extension MainViewController {
   enum Menu: CaseIterable {
     case nameCard
+    case notificationCard
     case gradientPage
     case chart
+    case progressMeter
     case customControl
 
     var title: String {
       switch self {
       case .nameCard:
         return "Name Card"
+      case .notificationCard:
+        return "Notification Card"
       case .gradientPage:
         return "Gradient Page"
       case .chart:
         return "Chart"
+      case .progressMeter:
+        return "Progress Meter"
       case .customControl:
         return "Custom Control"
       }
@@ -133,9 +143,9 @@ extension MainViewController {
 
     var category: String {
       switch self {
-      case .nameCard, .gradientPage:
+      case .nameCard, .notificationCard, .gradientPage:
         return "HostingView"
-      case .chart, .customControl:
+      case .chart, .progressMeter, .customControl:
         return "StatefulHostingView"
       }
     }

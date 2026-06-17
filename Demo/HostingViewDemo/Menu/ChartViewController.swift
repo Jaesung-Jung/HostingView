@@ -32,15 +32,21 @@ final class ChartViewController: UIViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     title = "Chart"
-    view.backgroundColor = .systemBackground
+    view.backgroundColor = .systemGroupedBackground
 
-    let randomData: () -> [Int] = { repeatElement((), count: 20).map { .random(in: 0...100) } }
+    let randomData: () -> [Int] = {
+      var value = Int.random(in: 36...72)
+      return repeatElement((), count: 24).map {
+        value = min(max(value + Int.random(in: -14...16), 8), 96)
+        return value
+      }
+    }
 
     let chartView = LineChartView(data: randomData())
     view.addSubview(chartView)
     chartView.snp.makeConstraints {
-      $0.leading.trailing.equalTo(view.safeAreaLayoutGuide).inset(10)
-      $0.centerY.equalToSuperview()
+      $0.leading.trailing.equalTo(view.safeAreaLayoutGuide).inset(20)
+      $0.centerY.equalToSuperview().offset(-34)
     }
 
     let reloadDataAction = UIAction(title: "Reload Data") { _ in
@@ -71,15 +77,7 @@ extension ChartViewController {
 
     init(data: [Int]) {
       self.contentView = StatefulHostingView(state: data) { data in
-        Chart {
-          ForEach(data.indices, id: \.self) { index in
-            LineMark(x: .value("x", index), y: .value("y", data[index]))
-              .interpolationMethod(.catmullRom)
-          }
-        }
-        .chartYScale(domain: 0...100)
-        .animation(.snappy, value: data)
-        .frame(height: 360)
+        ChartCard(data: data)
       }
       super.init(frame: .zero)
       addSubview(contentView)
@@ -93,6 +91,170 @@ extension ChartViewController {
     override func layoutSubviews() {
       super.layoutSubviews()
       contentView.frame = bounds
+    }
+  }
+}
+
+// MARK: - ChartViewController.ChartCard
+
+extension ChartViewController {
+  struct ChartCard: View {
+    let data: [Int]
+
+    private var average: Int {
+      guard !data.isEmpty else {
+        return 0
+      }
+      return data.reduce(0, +) / data.count
+    }
+
+    private var peak: Int {
+      data.max() ?? 0
+    }
+
+    private var low: Int {
+      data.min() ?? 0
+    }
+
+    private var trend: Int {
+      guard let first = data.first, let last = data.last else {
+        return 0
+      }
+      return last - first
+    }
+
+    var body: some View {
+      VStack(alignment: .leading, spacing: 22) {
+        HStack(alignment: .top) {
+          VStack(alignment: .leading, spacing: 6) {
+            Text("Traffic")
+              .font(.caption)
+              .fontWeight(.semibold)
+              .foregroundStyle(.secondary)
+
+            Text("Today")
+              .font(.largeTitle)
+              .fontWeight(.black)
+          }
+
+          Spacer()
+
+          TrendBadge(value: trend)
+        }
+
+        HStack(spacing: 12) {
+          MetricView(title: "Average", value: average, color: .blue)
+          MetricView(title: "Peak", value: peak, color: .purple)
+          MetricView(title: "Low", value: low, color: .teal)
+        }
+
+        Chart {
+          ForEach(data.indices, id: \.self) { index in
+            let value = data[index]
+
+            AreaMark(
+              x: .value("Hour", index),
+              y: .value("Visitors", value)
+            )
+            .interpolationMethod(.catmullRom)
+            .foregroundStyle(
+              .linearGradient(
+                colors: [.blue.opacity(0.32), .cyan.opacity(0.05)],
+                startPoint: .top,
+                endPoint: .bottom
+              )
+            )
+
+            LineMark(
+              x: .value("Hour", index),
+              y: .value("Visitors", value)
+            )
+            .interpolationMethod(.catmullRom)
+            .lineStyle(StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+            .foregroundStyle(.linearGradient(colors: [.cyan, .blue, .indigo], startPoint: .leading, endPoint: .trailing))
+
+          }
+
+          RuleMark(y: .value("Average", average))
+            .foregroundStyle(.secondary.opacity(0.35))
+            .lineStyle(StrokeStyle(lineWidth: 1, dash: [6, 5]))
+        }
+        .chartYScale(domain: 0...100)
+        .chartXAxis(.hidden)
+        .chartYAxis {
+          AxisMarks(position: .leading, values: [0, 25, 50, 75, 100]) { value in
+            AxisGridLine()
+              .foregroundStyle(.secondary.opacity(0.12))
+            AxisValueLabel()
+              .foregroundStyle(.secondary)
+          }
+        }
+        .frame(height: 280)
+        .animation(.snappy, value: data)
+      }
+      .padding(22)
+      .background(.background, in: RoundedRectangle(cornerRadius: 24))
+      .overlay {
+        RoundedRectangle(cornerRadius: 24)
+          .stroke(.quaternary, lineWidth: 1)
+      }
+      .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 10)
+    }
+  }
+}
+
+// MARK: - ChartViewController.MetricView
+
+extension ChartViewController {
+  struct MetricView: View {
+    var title: String
+    var value: Int
+    var color: Color
+
+    var body: some View {
+      VStack(alignment: .leading, spacing: 6) {
+        Text(title)
+          .font(.caption2)
+          .fontWeight(.semibold)
+          .foregroundStyle(.secondary)
+
+        Text("\(value)")
+          .font(.title3)
+          .fontWeight(.black)
+          .monospacedDigit()
+          .foregroundStyle(color)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.vertical, 12)
+      .padding(.horizontal, 14)
+      .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+    }
+  }
+}
+
+// MARK: - ChartViewController.TrendBadge
+
+extension ChartViewController {
+  struct TrendBadge: View {
+    var value: Int
+
+    private var isPositive: Bool {
+      value >= 0
+    }
+
+    var body: some View {
+      Label {
+        Text("\(abs(value))")
+          .monospacedDigit()
+      } icon: {
+        Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
+      }
+      .font(.caption)
+      .fontWeight(.bold)
+      .foregroundStyle(isPositive ? .green : .red)
+      .padding(.vertical, 8)
+      .padding(.horizontal, 10)
+      .background((isPositive ? Color.green : Color.red).opacity(0.12), in: Capsule())
     }
   }
 }
