@@ -120,7 +120,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1600;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					4B8F77FD2C900565003178A5 = {
 						CreatedOnToolsVersion = 16.0;
@@ -138,7 +138,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				4B8F78262C900861003178A5 /* XCRemoteSwiftPackageReference "SnapKit" */,
-				4B8F78292C900876003178A5 /* XCRemoteSwiftPackageReference "HostingView" */,
+				4B8F78292C900876003178A5 /* XCLocalSwiftPackageReference ".." */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4B8F77FF2C900565003178A5 /* Products */;
@@ -303,6 +303,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -359,6 +360,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -387,6 +389,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		4B8F78292C900876003178A5 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		4B8F78262C900861003178A5 /* XCRemoteSwiftPackageReference "SnapKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -394,14 +403,6 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 5.7.1;
-			};
-		};
-		4B8F78292C900876003178A5 /* XCRemoteSwiftPackageReference "HostingView" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Jaesung-Jung/HostingView";
-			requirement = {
-				branch = main;
-				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -414,7 +415,7 @@
 		};
 		4B8F782A2C900876003178A5 /* HostingView */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 4B8F78292C900876003178A5 /* XCRemoteSwiftPackageReference "HostingView" */;
+			package = 4B8F78292C900876003178A5 /* XCLocalSwiftPackageReference ".." */;
 			productName = HostingView;
 		};
 /* End XCSwiftPackageProductDependency section */
